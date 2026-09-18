@@ -446,8 +446,9 @@ public class GsmUmtsCallForwardOptions extends TimeConsumingPreferenceActivity
 // QTI_BEGIN: 2024-03-18: Telephony: Allow to query CF from UI when Wi-Fi is on
                 Log.d(LOG_TAG, "Mobile data is not available");
                 String title = (String)this.getResources().getText(R.string.no_mobile_data);
-                String message = (String)this.getResources()
-                        .getText(R.string.cf_setting_mobile_data_off_alert);
+                String message = (String)this.getResources().getText(
+                        mIsUtAllowedWhenWifiOn ? R.string.cf_setting_mobile_data_off_alert
+                                               : R.string.cf_setting_mobile_data_alert);
                 showAlertDialog(title, message);
                 return;
             }
