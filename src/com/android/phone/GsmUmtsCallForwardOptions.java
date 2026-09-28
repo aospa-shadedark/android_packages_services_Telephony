@@ -28,11 +28,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 // QTI_END: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding
 import android.database.Cursor;
-// QTI_BEGIN: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding
-import android.net.ConnectivityManager;
-// QTI_END: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding
 // QTI_BEGIN: 2024-03-18: Telephony: Allow to query CF from UI when Wi-Fi is on
-import android.net.Network;
 import android.net.NetworkCapabilities;
 // QTI_END: 2024-03-18: Telephony: Allow to query CF from UI when Wi-Fi is on
 // QTI_BEGIN: 2021-11-29: Telephony: Revert " Revert "Support standalone Call Forwarding ..."
@@ -454,7 +450,7 @@ public class GsmUmtsCallForwardOptions extends TimeConsumingPreferenceActivity
             }
             if (!mIsUtAllowedWhenWifiOn) {
                 // check network capabilities
-                NetworkCapabilities caps = getNetworkCapabilities();
+                NetworkCapabilities caps = QtiPhoneUtilsHelper.getNetworkCapabilities(mPhone);
                 if (caps == null) {
                     Log.d(LOG_TAG, "Can not get network capabilities!");
                     String title = (String)this.getResources()
@@ -507,28 +503,6 @@ public class GsmUmtsCallForwardOptions extends TimeConsumingPreferenceActivity
         }
         finish();
         return;
-    }
-
-// QTI_END: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding
-// QTI_BEGIN: 2024-03-18: Telephony: Allow to query CF from UI when Wi-Fi is on
-    private NetworkCapabilities getNetworkCapabilities() {
-// QTI_END: 2024-03-18: Telephony: Allow to query CF from UI when Wi-Fi is on
-// QTI_BEGIN: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(
-                Context.CONNECTIVITY_SERVICE);
-// QTI_END: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding
-// QTI_BEGIN: 2024-03-18: Telephony: Allow to query CF from UI when Wi-Fi is on
-        if (cm == null) {
-            return null;
-// QTI_END: 2024-03-18: Telephony: Allow to query CF from UI when Wi-Fi is on
-// QTI_BEGIN: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding
-        }
-// QTI_END: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding
-// QTI_BEGIN: 2024-03-18: Telephony: Allow to query CF from UI when Wi-Fi is on
-        Network activeNetwork = cm.getActiveNetwork();
-        return cm.getNetworkCapabilities(activeNetwork);
-// QTI_END: 2024-03-18: Telephony: Allow to query CF from UI when Wi-Fi is on
-// QTI_BEGIN: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding
     }
 
 // QTI_END: 2018-04-09: Telephony: IMS: Add data check for UT supplementary service of CallForwarding

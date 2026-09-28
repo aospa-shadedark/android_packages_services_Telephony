@@ -25,7 +25,8 @@ import static com.qti.extphone.ExtTelephonyManager.FEATURE_BACK_TO_BACK_SUPPLEME
 
 import android.content.Context;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.PersistableBundle;
 import android.provider.Settings;
 import android.telecom.PhoneAccount;
@@ -285,19 +286,20 @@ public final class QtiPhoneUtilsHelper {
         return true;
     }
 
-    static int getActiveNetworkType(Phone phone) {
+    static NetworkCapabilities getNetworkCapabilities(Phone phone) {
         if (phone == null) {
-            return ConnectivityManager.TYPE_NONE;
+            return null;
         }
-        ConnectivityManager cm = (ConnectivityManager)phone.getContext().getSystemService(
+        Context context = phone.getContext();
+        if (context == null) {
+            return null;
+        }
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(
                 Context.CONNECTIVITY_SERVICE);
-        if (cm != null) {
-            NetworkInfo ni = cm.getActiveNetworkInfo();
-            if ((ni == null) || !ni.isConnected()){
-                return ConnectivityManager.TYPE_NONE;
-            }
-            return ni.getType();
+        if (cm == null) {
+            return null;
         }
-        return ConnectivityManager.TYPE_NONE;
+        Network activeNetwork = cm.getActiveNetwork();
+        return cm.getNetworkCapabilities(activeNetwork);
     }
 }
