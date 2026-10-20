@@ -31,7 +31,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 // QTI_END: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
 import android.os.AsyncResult;
 import android.os.Bundle;
@@ -156,6 +156,7 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
 // QTI_BEGIN: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
     private BroadcastReceiver mReceiver = null;
     private boolean mCheckData = false;
+    private boolean mIsUtAllowedWhenWifiOn = false;
 // QTI_END: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
     private SubscriptionInfoHelper mSubscriptionInfoHelper;
 // QTI_BEGIN: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
@@ -583,6 +584,7 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
 
         PersistableBundle pb = configManager.getConfigForSubId(mPhone.getSubId());
         mCheckData = pb.getBoolean("check_mobile_data_for_cf");
+        mIsUtAllowedWhenWifiOn = pb.getBoolean("allow_ut_when_wifi_on_bool");
 // QTI_END: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
     }
 
@@ -763,36 +765,29 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
                 defaultDataSub + " current sub is : " + sub);
 
 // QTI_END: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
-// QTI_BEGIN: 2023-03-28: Telephony: Remove switch DDS dialog
-        if (sub != defaultDataSub && mPhone.isUtEnabled()) {
-            Log.d(LOG_TAG, "Show data in use indication if data sub is not on current sub");
-            showDataInuseToast();
-            initCallBarring();
-            return;
-// QTI_END: 2023-03-28: Telephony: Remove switch DDS dialog
-// QTI_BEGIN: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
-        }
-
         if (mPhone.isUtEnabled() && mCheckData) {
-// QTI_END: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
-            int activeNetworkType = QtiPhoneUtilsHelper.getActiveNetworkType(mPhone);
 // QTI_BEGIN: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
             boolean isDataRoaming = mPhone.getServiceState().getDataRoaming();
             boolean isDataRoamingEnabled = mPhone.getDataRoamingEnabled();
             boolean promptForDataRoaming = isDataRoaming && !isDataRoamingEnabled;
 // QTI_END: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
-            Log.d(LOG_TAG, "activeNetworkType = " + activeNetworkType + ", sub = " + sub +
+            boolean isDataEnabled = TelephonyManager.from(this)
+                    .createForSubscriptionId(sub).isDataEnabled();
+            boolean isAirplaneMode = Settings.Global.getInt(
+                    mPhone.getContext().getContentResolver(), Settings.Global.AIRPLANE_MODE_ON,
+                    PhoneGlobals.AIRPLANE_OFF) == PhoneGlobals.AIRPLANE_ON;
 // QTI_BEGIN: 2018-05-07: Telephony: IMS: Call barring enhancement for UT
-                    ", defaultDataSub = " + defaultDataSub + ", isDataRoaming = " +
-                    isDataRoaming + ", isDataRoamingEnabled= " + isDataRoamingEnabled);
-            if ((activeNetworkType != ConnectivityManager.TYPE_MOBILE
-                        || sub != defaultDataSub)
-                    && !(activeNetworkType == ConnectivityManager.TYPE_NONE
-                        && promptForDataRoaming)) {
+            Log.d(LOG_TAG, "sub = " + sub +
+                    ", defaultDataSub = " + defaultDataSub + ", isDataEnabled = " +
+                    isDataEnabled + ", isAirplaneMode = " + isAirplaneMode +
+                    ", isDataRoaming = " + isDataRoaming + ", isDataRoamingEnabled= " +
+                    isDataRoamingEnabled);
+            if (!isDataEnabled || isAirplaneMode) {
                 if (DBG) Log.d(LOG_TAG, "Show alert dialog if mobile network is disabled");
                 String title = (String)this.getResources().getText(R.string.no_mobile_data);
-                String message = (String)this.getResources()
-                    .getText(R.string.cf_setting_mobile_data_alert);
+                String message = (String)this.getResources().getText(
+                        mIsUtAllowedWhenWifiOn ? R.string.cf_setting_mobile_data_off_alert
+                                               : R.string.cf_setting_mobile_data_alert);
                 showAlertDialog(title, message);
                 return;
             } else if (promptForDataRoaming) {
@@ -803,6 +798,33 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
                     .getText(R.string.cf_setting_mobile_data_roaming_alert);
                 showAlertDialog(title, message);
                 return;
+            }
+
+            if (!mIsUtAllowedWhenWifiOn) {
+                // check network capabilities to check if Wi-Fi is on
+                NetworkCapabilities caps = QtiPhoneUtilsHelper.getNetworkCapabilities(mPhone);
+                if (caps == null) {
+                    Log.e(LOG_TAG, "Can not get network capabilities!");
+                    String title = (String)this.getResources()
+                            .getText(R.string.no_network_available);
+                    String message = (String)this.getResources()
+                            .getText(R.string.cf_setting_network_alert);
+                    showAlertDialog(title, message);
+                    return;
+                }
+                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    Log.d(LOG_TAG, "Wi-Fi is on, show alert to turn off Wi-Fi");
+                    String title = (String)this.getResources().getText(R.string.wifi_on);
+                    String message = (String)this.getResources()
+                            .getText(R.string.cf_setting_wifi_on_alert);
+                    showAlertDialog(title, message);
+                    return;
+                }
+            }
+
+            if (sub != defaultDataSub) {
+                Log.d(LOG_TAG, "Show data in use indication if data sub is not on current sub");
+                showDataInuseToast();
             }
         }
         initCallBarring();
